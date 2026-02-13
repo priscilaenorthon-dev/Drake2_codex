@@ -25,6 +25,8 @@
                 <a class="nav-link" href="/crud?module=vacation_requests">RH</a>
                 <a class="nav-link" href="/crud?module=operations_records">Operações</a>
                 <a class="nav-link" href="/workflows">Workflows</a>
+                <a class="nav-link" href="/workflows/config">Configuração de Fluxos</a>
+                <a class="nav-link" href="/workflows/monitor">SLA Workflows</a>
                 <a class="nav-link" href="/reports">Relatórios</a>
                 <a class="nav-link text-danger" href="/logout">Sair</a>
             </nav>

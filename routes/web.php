@@ -19,6 +19,9 @@ $router->add('POST', '/crud/store', [CrudController::class, 'store']);
 $router->add('GET', '/crud/delete', [CrudController::class, 'delete']);
 
 $router->add('GET', '/workflows', [WorkflowController::class, 'index']);
+$router->add('GET', '/workflows/config', [WorkflowController::class, 'config']);
+$router->add('POST', '/workflows/config', [WorkflowController::class, 'config']);
+$router->add('GET', '/workflows/monitor', [WorkflowController::class, 'monitor']);
 $router->add('GET', '/workflows/approve', [WorkflowController::class, 'approve']);
 $router->add('GET', '/workflows/team-swap', [WorkflowController::class, 'teamSwap']);
 $router->add('POST', '/workflows/team-swap', [WorkflowController::class, 'teamSwap']);
