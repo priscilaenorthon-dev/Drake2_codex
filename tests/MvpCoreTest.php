@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Core\Router;
 use App\Services\PermissionService;
 use App\Services\ScheduleService;
 use App\Services\TrainingService;
@@ -37,5 +38,46 @@ final class MvpCoreTest extends TestCase
         $service = new TrainingService();
         $this->assertTrue($service->expiringWithin30Days(date('Y-m-d', strtotime('+10 day'))));
         $this->assertFalse($service->expiringWithin30Days(date('Y-m-d', strtotime('+45 day'))));
+    }
+
+    public function testUserWithoutPermissionCannotApproveWorkflow(): void
+    {
+        $status = $this->dispatchProtectedRoute('/workflows/approve', 'workflow.approve');
+        $this->assertSame(403, $status);
+    }
+
+    public function testUserWithoutPermissionCannotExportReport(): void
+    {
+        $status = $this->dispatchProtectedRoute('/reports', 'reports.view');
+        $this->assertSame(403, $status);
+    }
+
+    public function testUserWithoutPermissionCannotChangeCrudRecords(): void
+    {
+        $status = $this->dispatchProtectedRoute('/crud/store', 'crud.manage', 'POST');
+        $this->assertSame(403, $status);
+    }
+
+    private function dispatchProtectedRoute(string $path, string $requiredPermission, string $method = 'GET'): int
+    {
+        $statusCode = 0;
+        $executed = false;
+
+        $router = new Router(
+            static fn(string $permission): bool => $permission !== $requiredPermission,
+            static function () use (&$statusCode): void {
+                $statusCode = 403;
+            }
+        );
+
+        $router->add($method, $path, static function () use (&$executed): void {
+            $executed = true;
+        }, $requiredPermission);
+
+        $router->dispatch($method, $path);
+
+        $this->assertFalse($executed, 'Action não deve executar sem permissão.');
+
+        return $statusCode;
     }
 }
