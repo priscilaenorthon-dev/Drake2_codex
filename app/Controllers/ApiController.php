@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\TenantContext;
 use App\Repositories\BaseRepository;
+use App\Services\TrainingService;
 
 final class ApiController
 {
@@ -34,7 +35,11 @@ final class ApiController
 
         $repo = new BaseRepository();
         $trainings = $repo->allByTenant('employee_trainings', TenantContext::tenantId());
-        $filtered = array_values(array_filter($trainings, static fn(array $item): bool => strtotime($item['valid_until']) <= strtotime('+30 days')));
+        $service = new TrainingService();
+        $filtered = array_values(array_filter(
+            $trainings,
+            static fn(array $item): bool => $service->expiringWithin30Days((string) $item['valid_until'])
+        ));
 
         header('Content-Type: application/json');
         echo json_encode($filtered);
