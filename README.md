@@ -81,11 +81,9 @@ Sistema web SaaS multiempresa (multi-tenant) em arquitetura MVC, inspirado no DR
 composer test
 ```
 
-Cobre mínimo solicitado:
-- auth (hash/verify)
-- permissões
-- validação de escalas por impedimento
-- vencimento de treinamento
+O comando executa dois níveis de validação sem depender de `phpunit` instalado no ambiente:
+- `scripts/run_full_system_tests.php`: smoke/integration de módulos (Dashboard, CRUD, Workflows, Relatórios, Acessos e APIs) com banco SQLite em memória e isolamento multi-tenant.
+- `scripts/run_basic_tests.php`: regras centrais (auth/hash, permissões, impedimentos de escala e vencimento de treinamento).
 
 ## Backlog V2 (Portal do colaborador)
 

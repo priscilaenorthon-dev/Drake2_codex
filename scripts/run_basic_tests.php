@@ -17,7 +17,9 @@ $scheduleService = new App\Services\ScheduleService();
 if (!$scheduleService->canConfirm([['valid_until' => date('Y-m-d', strtotime('-1 day'))]])) { $pass++; } else { $fail++; echo "Schedule impediment test failed\n"; }
 
 $trainingService = new App\Services\TrainingService();
-if ($trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+15 day'))) && !$trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+45 day')))) { $pass++; } else { $fail++; echo "Training expiration test failed\n"; }
+if ($trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+15 day')))
+    && !$trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+45 day')))
+    && !$trainingService->expiringWithin30Days(date('Y-m-d', strtotime('-1 day')))) { $pass++; } else { $fail++; echo "Training expiration test failed\n"; }
 
 echo "Passed: {$pass} | Failed: {$fail}\n";
 exit($fail > 0 ? 1 : 0);

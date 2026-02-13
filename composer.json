@@ -20,6 +20,6 @@
     }
   },
   "scripts": {
-    "test": "phpunit --testdox"
+    "test": "php scripts/run_full_system_tests.php && php scripts/run_basic_tests.php"
   }
 }
