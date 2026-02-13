@@ -19,5 +19,8 @@ if (!$scheduleService->canConfirm([['valid_until' => date('Y-m-d', strtotime('-1
 $trainingService = new App\Services\TrainingService();
 if ($trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+15 day'))) && !$trainingService->expiringWithin30Days(date('Y-m-d', strtotime('+45 day')))) { $pass++; } else { $fail++; echo "Training expiration test failed\n"; }
 
+$logisticsService = new App\Services\LogisticsService();
+if ($logisticsService->canEmbark(true, true, false) && !$logisticsService->canEmbark(true, false, false)) { $pass++; } else { $fail++; echo "Logistics embark rule test failed\n"; }
+
 echo "Passed: {$pass} | Failed: {$fail}\n";
 exit($fail > 0 ? 1 : 0);

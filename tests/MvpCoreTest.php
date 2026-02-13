@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Services\LogisticsService;
 use App\Services\PermissionService;
 use App\Services\ScheduleService;
 use App\Services\TrainingService;
@@ -37,5 +38,22 @@ final class MvpCoreTest extends TestCase
         $service = new TrainingService();
         $this->assertTrue($service->expiringWithin30Days(date('Y-m-d', strtotime('+10 day'))));
         $this->assertFalse($service->expiringWithin30Days(date('Y-m-d', strtotime('+45 day'))));
+    }
+
+    public function testLogisticsEmbarkRequiresComplianceAndNoImpediment(): void
+    {
+        $service = new LogisticsService();
+        $this->assertFalse($service->canEmbark(true, false, false));
+        $this->assertFalse($service->canEmbark(true, true, true));
+        $this->assertTrue($service->canEmbark(true, true, false));
+        $this->assertFalse($service->canEmbark(false, false, true));
+    }
+
+    public function testInvalidLogisticsTransitionThrowsException(): void
+    {
+        $service = new LogisticsService();
+
+        $this->expectException(\RuntimeException::class);
+        $service->assertValidTransition('solicitado', 'embarcado');
     }
 }

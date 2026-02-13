@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\View;
+use App\Services\LogisticsService;
 
 final class WorkflowController
 {
@@ -43,6 +44,99 @@ final class WorkflowController
 
         header('Content-Type: application/json');
         echo json_encode(['employee_id' => $employeeId, 'blocked' => $hasIssues, 'reason' => $hasIssues ? 'Treinamento vencido' : null]);
+    }
+
+
+    public function transitionLogisticsStatus(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            return;
+        }
+
+        $requestId = (int) ($_POST['request_id'] ?? 0);
+        $nextStatus = (string) ($_POST['to_status'] ?? '');
+        $note = trim((string) ($_POST['note'] ?? ''));
+
+        if ($requestId < 1 || $nextStatus === '') {
+            http_response_code(422);
+            echo 'Parâmetros obrigatórios ausentes.';
+            return;
+        }
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('SELECT * FROM logistics_requests WHERE id = :id AND tenant_id = :tenant_id');
+        $stmt->execute(['id' => $requestId, 'tenant_id' => (int) $user['tenant_id']]);
+        $request = $stmt->fetch();
+
+        if (!$request) {
+            http_response_code(404);
+            echo 'Solicitação logística não encontrada.';
+            return;
+        }
+
+        $service = new LogisticsService();
+
+        try {
+            $service->assertValidTransition((string) $request['operational_status'], $nextStatus);
+        } catch (\RuntimeException $exception) {
+            http_response_code(422);
+            echo $exception->getMessage();
+            return;
+        }
+
+        if ($nextStatus === 'embarcado') {
+            $trainingStmt = $pdo->prepare('SELECT COUNT(*) FROM employee_trainings WHERE tenant_id = :tenant_id AND employee_id = :employee_id AND valid_until >= CURDATE()');
+            $trainingStmt->execute([
+                'tenant_id' => (int) $user['tenant_id'],
+                'employee_id' => (int) ($request['employee_id'] ?? 0),
+            ]);
+            $hasValidCompliance = (int) $trainingStmt->fetchColumn() > 0;
+
+            $impedimentStmt = $pdo->prepare('SELECT COUNT(*) FROM employee_impediments WHERE tenant_id = :tenant_id AND employee_id = :employee_id AND status = :status AND (ends_at IS NULL OR ends_at >= NOW())');
+            $impedimentStmt->execute([
+                'tenant_id' => (int) $user['tenant_id'],
+                'employee_id' => (int) ($request['employee_id'] ?? 0),
+                'status' => 'active',
+            ]);
+            $hasOpenImpediments = (int) $impedimentStmt->fetchColumn() > 0;
+
+            $canEmbark = $service->canEmbark((bool) $request['requires_compliance'], $hasValidCompliance, $hasOpenImpediments);
+            if (!$canEmbark) {
+                http_response_code(422);
+                echo 'Embarque bloqueado: compliance inválido e/ou impedimento ativo.';
+                return;
+            }
+        }
+
+        $updateStmt = $pdo->prepare('UPDATE logistics_requests
+            SET operational_status = :status,
+                status = :status,
+                embarked_at = CASE WHEN :status_embarked = 1 THEN NOW() ELSE embarked_at END,
+                updated_at = NOW()
+            WHERE id = :id AND tenant_id = :tenant_id');
+        $updateStmt->execute([
+            'status' => $nextStatus,
+            'status_embarked' => $nextStatus === 'embarcado' ? 1 : 0,
+            'id' => $requestId,
+            'tenant_id' => (int) $user['tenant_id'],
+        ]);
+
+        $historyStmt = $pdo->prepare('INSERT INTO logistics_status_history
+            (tenant_id, logistics_request_id, changed_by_user_id, from_status, to_status, note, created_at)
+            VALUES (:tenant_id, :request_id, :user_id, :from_status, :to_status, :note, NOW())');
+        $historyStmt->execute([
+            'tenant_id' => (int) $user['tenant_id'],
+            'request_id' => $requestId,
+            'user_id' => (int) $user['id'],
+            'from_status' => (string) $request['operational_status'],
+            'to_status' => $nextStatus,
+            'note' => $note !== '' ? $note : null,
+        ]);
+
+        header('Content-Type: application/json');
+        echo json_encode(['request_id' => $requestId, 'from_status' => $request['operational_status'], 'to_status' => $nextStatus]);
     }
 
     public function teamSwap(): void

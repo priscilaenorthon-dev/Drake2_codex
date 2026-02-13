@@ -78,8 +78,12 @@ Sistema web SaaS multiempresa (multi-tenant) em arquitetura MVC, inspirado no DR
 ## Testes
 
 ```bash
+php scripts/run_full_tests.php
+php scripts/run_basic_tests.php
 composer test
 ```
+
+> `composer test` depende de `phpunit` instalado via Composer (acesso ao Packagist).
 
 Cobre mínimo solicitado:
 - auth (hash/verify)

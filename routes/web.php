@@ -23,6 +23,7 @@ $router->add('GET', '/workflows/approve', [WorkflowController::class, 'approve']
 $router->add('GET', '/workflows/team-swap', [WorkflowController::class, 'teamSwap']);
 $router->add('POST', '/workflows/team-swap', [WorkflowController::class, 'teamSwap']);
 $router->add('GET', '/workflows/validate-impediments', [WorkflowController::class, 'validateImpediments']);
+$router->add('POST', '/workflows/logistics/status', [WorkflowController::class, 'transitionLogisticsStatus']);
 
 $router->add('GET', '/reports', [ReportController::class, 'index']);
 

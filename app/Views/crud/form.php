@@ -12,6 +12,13 @@
                 <option value="pending">Pendente</option>
                 <option value="planned">Planejado</option>
                 <option value="open">Aberto</option>
+                <option value="solicitado">Solicitado</option>
+                <option value="em_cotacao">Em cotação</option>
+                <option value="aprovado">Aprovado</option>
+                <option value="emitido">Emitido</option>
+                <option value="embarcado">Embarcado</option>
+                <option value="concluido">Concluído</option>
+                <option value="cancelado">Cancelado</option>
             </select>
         </div>
         <button class="btn btn-success">Salvar</button>
