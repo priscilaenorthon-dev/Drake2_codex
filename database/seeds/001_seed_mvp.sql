@@ -17,8 +17,9 @@ INSERT INTO permissions (id, name, created_at, updated_at) VALUES
 (1, 'dashboard.view', NOW(), NOW()),
 (2, 'crud.manage', NOW(), NOW()),
 (3, 'workflow.approve', NOW(), NOW()),
-(4, 'reports.view', NOW(), NOW());
-INSERT INTO role_permissions (role_id, permission_id) VALUES (1,1),(1,2),(1,3),(1,4);
+(4, 'reports.view', NOW(), NOW()),
+(5, 'access.manage', NOW(), NOW());
+INSERT INTO role_permissions (role_id, permission_id) VALUES (1,1),(1,2),(1,3),(1,4),(1,5);
 INSERT INTO user_roles (user_id, role_id) VALUES (1,1);
 
 INSERT INTO schedules (tenant_id, employee_id, unit_id, shift_id, schedule_date, status, created_at, updated_at)

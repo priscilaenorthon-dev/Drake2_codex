@@ -26,6 +26,7 @@
                 <a class="nav-link" href="/crud?module=operations_records">Operações</a>
                 <a class="nav-link" href="/workflows">Workflows</a>
                 <a class="nav-link" href="/reports">Relatórios</a>
+                <a class="nav-link" href="/access">Acessos</a>
                 <a class="nav-link text-danger" href="/logout">Sair</a>
             </nav>
         </aside>
