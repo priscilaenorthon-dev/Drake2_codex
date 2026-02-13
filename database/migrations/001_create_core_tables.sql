@@ -129,7 +129,7 @@ CREATE TABLE role_permissions (
 );
 
 CREATE TABLE user_roles (
-  user_id BIGINT UNSIGNED NOT NULL,
+  actor_id BIGINT UNSIGNED NOT NULL,
   role_id BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (user_id, role_id),
   FOREIGN KEY (user_id) REFERENCES users(id),
@@ -240,13 +240,19 @@ CREATE TABLE approval_requests (
 CREATE TABLE audit_logs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   tenant_id BIGINT UNSIGNED NOT NULL,
-  user_id BIGINT UNSIGNED NOT NULL,
+  actor_id BIGINT UNSIGNED NOT NULL,
   resource VARCHAR(80) NOT NULL,
   action VARCHAR(20) NOT NULL,
   before_data JSON NULL,
   after_data JSON NULL,
+  ip_address VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  correlation_id VARCHAR(120) NULL,
   created_at DATETIME NOT NULL,
   INDEX idx_audit_tenant (tenant_id, created_at),
+  INDEX idx_audit_actor (actor_id),
+  INDEX idx_audit_resource_action (resource, action),
+  INDEX idx_audit_correlation (correlation_id),
   FOREIGN KEY (tenant_id) REFERENCES tenants(id),
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  FOREIGN KEY (actor_id) REFERENCES users(id)
 );

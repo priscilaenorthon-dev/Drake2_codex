@@ -25,6 +25,10 @@ $router->add('POST', '/workflows/team-swap', [WorkflowController::class, 'teamSw
 $router->add('GET', '/workflows/validate-impediments', [WorkflowController::class, 'validateImpediments']);
 
 $router->add('GET', '/reports', [ReportController::class, 'index']);
+$router->add('GET', '/reports/audit', [ReportController::class, 'audit']);
 
 $router->add('GET', '/api/schedules', [ApiController::class, 'schedules']);
 $router->add('GET', '/api/trainings-expiring', [ApiController::class, 'trainingsExpiring']);
+
+$router->add('POST', '/api/user-roles', [ApiController::class, 'assignRole']);
+$router->add('POST', '/api/role-permissions', [ApiController::class, 'assignPermission']);

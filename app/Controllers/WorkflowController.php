@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\View;
+use App\Services\AuditService;
 
 final class WorkflowController
 {
@@ -26,10 +27,36 @@ final class WorkflowController
 
     public function approve(): void
     {
+        $user = Auth::user();
+        if (!$user) {
+            header('Location: /login');
+            return;
+        }
+
+        $tenantId = (int) $user['tenant_id'];
         $id = (int) ($_GET['id'] ?? 0);
         $status = $_GET['status'] ?? 'approved';
-        $stmt = Database::connection()->prepare('UPDATE approval_requests SET status = :status, updated_at = NOW() WHERE id = :id');
-        $stmt->execute(['status' => $status, 'id' => $id]);
+
+        $select = Database::connection()->prepare('SELECT * FROM approval_requests WHERE id = :id AND tenant_id = :tenant_id LIMIT 1');
+        $select->execute(['id' => $id, 'tenant_id' => $tenantId]);
+        $before = $select->fetch() ?: null;
+
+        $stmt = Database::connection()->prepare('UPDATE approval_requests SET status = :status, updated_at = NOW() WHERE id = :id AND tenant_id = :tenant_id');
+        $stmt->execute(['status' => $status, 'id' => $id, 'tenant_id' => $tenantId]);
+
+        if ($before) {
+            $after = $before;
+            $after['status'] = $status;
+            $after['updated_at'] = date('Y-m-d H:i:s');
+            (new AuditService())->logEvent(
+                $tenantId,
+                (int) $user['id'],
+                'approval_requests',
+                'state_transition',
+                ['id' => $id, 'status' => $before['status']],
+                ['id' => $id, 'status' => $status]
+            );
+        }
 
         header('Location: /workflows');
     }
@@ -47,13 +74,19 @@ final class WorkflowController
 
     public function teamSwap(): void
     {
+        $user = Auth::user();
+        if (!$user) {
+            header('Location: /login');
+            return;
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             View::render('workflows/swap');
             return;
         }
 
         $payload = [
-            'tenant_id' => (int) Auth::user()['tenant_id'],
+            'tenant_id' => (int) $user['tenant_id'],
             'request_type' => 'team_swap',
             'request_payload' => json_encode($_POST),
             'status' => 'pending',
@@ -64,6 +97,15 @@ final class WorkflowController
         $sql = 'INSERT INTO approval_requests (tenant_id, request_type, request_payload, status, created_at, updated_at)
                 VALUES (:tenant_id, :request_type, :request_payload, :status, :created_at, :updated_at)';
         Database::connection()->prepare($sql)->execute($payload);
+
+        (new AuditService())->logEvent(
+            (int) $user['tenant_id'],
+            (int) $user['id'],
+            'approval_requests',
+            'create',
+            null,
+            ['request_type' => 'team_swap', 'status' => 'pending', 'payload' => $_POST]
+        );
 
         header('Location: /workflows');
     }

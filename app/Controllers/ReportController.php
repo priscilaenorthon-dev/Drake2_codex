@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\View;
+use App\Services\AuditService;
 
 final class ReportController
 {
@@ -33,6 +34,14 @@ final class ReportController
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
 
+        (new AuditService())->logEvent(
+            $tenantId,
+            (int) $user['id'],
+            'reports.schedules',
+            'view',
+            null,
+            ['from' => $from, 'to' => $to, 'unit_id' => $unitId, 'export' => $_GET['export'] ?? null]
+        );
 
         if (($_GET['export'] ?? '') === 'pdf') {
             header('Content-Type: text/html; charset=utf-8');
@@ -60,5 +69,76 @@ final class ReportController
         }
 
         View::render('dashboard/reports', ['rows' => $rows, 'from' => $from, 'to' => $to]);
+    }
+
+    public function audit(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            header('Location: /login');
+            return;
+        }
+
+        $tenantId = (int) $user['tenant_id'];
+        $from = $_GET['from'] ?? date('Y-m-01');
+        $to = $_GET['to'] ?? date('Y-m-t');
+        $actorId = $_GET['actor_id'] ?? '';
+        $resource = trim((string) ($_GET['resource'] ?? ''));
+        $action = trim((string) ($_GET['action'] ?? ''));
+
+        $sql = 'SELECT a.*, u.name AS actor_name
+                FROM audit_logs a
+                JOIN users u ON u.id = a.actor_id
+                WHERE a.tenant_id = :tenant_id
+                AND a.created_at BETWEEN :from_date AND :to_date';
+        $params = [
+            'tenant_id' => $tenantId,
+            'from_date' => $from . ' 00:00:00',
+            'to_date' => $to . ' 23:59:59',
+        ];
+
+        if ($actorId !== '') {
+            $sql .= ' AND a.actor_id = :actor_id';
+            $params['actor_id'] = (int) $actorId;
+        }
+        if ($resource !== '') {
+            $sql .= ' AND a.resource = :resource';
+            $params['resource'] = $resource;
+        }
+        if ($action !== '') {
+            $sql .= ' AND a.action = :action';
+            $params['action'] = $action;
+        }
+
+        $sql .= ' ORDER BY a.id DESC LIMIT 300';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        $usersStmt = Database::connection()->prepare('SELECT id, name FROM users WHERE tenant_id = :tenant_id ORDER BY name ASC');
+        $usersStmt->execute(['tenant_id' => $tenantId]);
+        $actors = $usersStmt->fetchAll();
+
+        (new AuditService())->logEvent(
+            $tenantId,
+            (int) $user['id'],
+            'reports.audit',
+            'view',
+            null,
+            ['from' => $from, 'to' => $to, 'actor_id' => $actorId, 'resource' => $resource, 'action' => $action]
+        );
+
+        View::render('dashboard/audit', [
+            'rows' => $rows,
+            'actors' => $actors,
+            'filters' => [
+                'from' => $from,
+                'to' => $to,
+                'actor_id' => $actorId,
+                'resource' => $resource,
+                'action' => $action,
+            ],
+        ]);
     }
 }
