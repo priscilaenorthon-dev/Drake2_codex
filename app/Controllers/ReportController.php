@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Database;
+use App\Core\TenantContext;
 use App\Core\View;
 
 final class ReportController
@@ -13,14 +14,19 @@ final class ReportController
     public function index(): void
     {
         $user = Auth::user();
-        $tenantId = (int) $user['tenant_id'];
+        if (!$user) {
+            header('Location: /login');
+            return;
+        }
+
+        $tenantId = TenantContext::tenantId();
 
         $from = $_GET['from'] ?? date('Y-m-01');
         $to = $_GET['to'] ?? date('Y-m-t');
         $unitId = $_GET['unit_id'] ?? null;
 
         $sql = 'SELECT s.*, e.name employee_name FROM schedules s
-                JOIN employees e ON e.id = s.employee_id
+                JOIN employees e ON e.id = s.employee_id AND e.tenant_id = s.tenant_id
                 WHERE s.tenant_id = :tenant AND s.schedule_date BETWEEN :from AND :to';
         $params = ['tenant' => $tenantId, 'from' => $from, 'to' => $to];
 
@@ -32,7 +38,6 @@ final class ReportController
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
-
 
         if (($_GET['export'] ?? '') === 'pdf') {
             header('Content-Type: text/html; charset=utf-8');
