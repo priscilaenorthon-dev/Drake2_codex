@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Database;
+use App\Core\TenantContext;
 use App\Core\View;
 
 final class WorkflowController
@@ -18,9 +19,10 @@ final class WorkflowController
             return;
         }
 
-        $pdo = Database::connection();
-        $tenantId = (int) $user['tenant_id'];
-        $requests = $pdo->query("SELECT * FROM approval_requests WHERE tenant_id = {$tenantId} ORDER BY id DESC")->fetchAll();
+        $stmt = Database::connection()->prepare('SELECT * FROM approval_requests WHERE tenant_id = :tenant_id ORDER BY id DESC');
+        $stmt->execute(['tenant_id' => TenantContext::tenantId()]);
+        $requests = $stmt->fetchAll();
+
         View::render('workflows/index', ['requests' => $requests]);
     }
 
@@ -28,8 +30,17 @@ final class WorkflowController
     {
         $id = (int) ($_GET['id'] ?? 0);
         $status = $_GET['status'] ?? 'approved';
-        $stmt = Database::connection()->prepare('UPDATE approval_requests SET status = :status, updated_at = NOW() WHERE id = :id');
-        $stmt->execute(['status' => $status, 'id' => $id]);
+        $stmt = Database::connection()->prepare(
+            'UPDATE approval_requests
+             SET status = :status, updated_at = :updated_at
+             WHERE tenant_id = :tenant_id AND id = :id'
+        );
+        $stmt->execute([
+            'status' => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'tenant_id' => TenantContext::tenantId(),
+            'id' => $id,
+        ]);
 
         header('Location: /workflows');
     }
@@ -37,8 +48,15 @@ final class WorkflowController
     public function validateImpediments(): void
     {
         $employeeId = (int) ($_GET['employee_id'] ?? 0);
-        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM employee_trainings WHERE employee_id = :employee_id AND valid_until < CURDATE()');
-        $stmt->execute(['employee_id' => $employeeId]);
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM employee_trainings
+             WHERE tenant_id = :tenant_id AND employee_id = :employee_id AND valid_until < :today'
+        );
+        $stmt->execute([
+            'tenant_id' => TenantContext::tenantId(),
+            'employee_id' => $employeeId,
+            'today' => date('Y-m-d'),
+        ]);
         $hasIssues = (int) $stmt->fetchColumn() > 0;
 
         header('Content-Type: application/json');
@@ -53,7 +71,7 @@ final class WorkflowController
         }
 
         $payload = [
-            'tenant_id' => (int) Auth::user()['tenant_id'],
+            'tenant_id' => TenantContext::tenantId(),
             'request_type' => 'team_swap',
             'request_payload' => json_encode($_POST),
             'status' => 'pending',

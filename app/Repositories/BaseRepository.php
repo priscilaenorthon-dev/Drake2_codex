@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Core\Database;
+use InvalidArgumentException;
 use PDO;
 
 class BaseRepository
@@ -16,6 +17,7 @@ class BaseRepository
 
     public function allByTenant(string $table, int $tenantId): array
     {
+        $tenantId = $this->assertTenantContext($tenantId);
         $stmt = $this->pdo->prepare("SELECT * FROM {$table} WHERE tenant_id = :tenant ORDER BY id DESC");
         $stmt->execute(['tenant' => $tenantId]);
 
@@ -34,15 +36,17 @@ class BaseRepository
 
     public function update(string $table, int $id, int $tenantId, array $data): void
     {
+        $tenantId = $this->assertTenantContext($tenantId);
         $sets = implode(',', array_map(fn($k) => "{$k} = :{$k}", array_keys($data)));
-        $sql = "UPDATE {$table} SET {$sets} WHERE id = :id AND tenant_id = :tenant_id";
+        $sql = "UPDATE {$table} SET {$sets} WHERE tenant_id = :tenant_id AND id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([...$data, 'id' => $id, 'tenant_id' => $tenantId]);
     }
 
     public function find(string $table, int $id, int $tenantId): ?array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM {$table} WHERE id = :id AND tenant_id = :tenant");
+        $tenantId = $this->assertTenantContext($tenantId);
+        $stmt = $this->pdo->prepare("SELECT * FROM {$table} WHERE tenant_id = :tenant AND id = :id");
         $stmt->execute(['id' => $id, 'tenant' => $tenantId]);
         $row = $stmt->fetch();
 
@@ -51,7 +55,17 @@ class BaseRepository
 
     public function delete(string $table, int $id, int $tenantId): void
     {
-        $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE id = :id AND tenant_id = :tenant");
+        $tenantId = $this->assertTenantContext($tenantId);
+        $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE tenant_id = :tenant AND id = :id");
         $stmt->execute(['id' => $id, 'tenant' => $tenantId]);
+    }
+
+    private function assertTenantContext(int $tenantId): int
+    {
+        if ($tenantId < 1) {
+            throw new InvalidArgumentException('Tenant context is required.');
+        }
+
+        return $tenantId;
     }
 }
