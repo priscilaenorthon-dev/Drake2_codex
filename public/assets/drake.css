@@ -1,0 +1,36 @@
+:root {
+    --drake-bg: #0f172a;
+    --drake-panel: #111827;
+    --drake-panel-2: #1f2937;
+    --drake-accent: #22c55e;
+    --drake-text: #e5e7eb;
+    --drake-muted: #9ca3af;
+    --drake-warning: #f59e0b;
+}
+body { background: var(--drake-bg); color: var(--drake-text); }
+.sidebar {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+    border-right: 1px solid #1f2937;
+}
+.brand { color: #fff; font-weight: 700; letter-spacing: .8px; }
+.nav-link { color: var(--drake-muted); border-radius: .5rem; }
+.nav-link:hover, .nav-link.active { background: #1f2937; color: #fff; }
+.panel-card {
+    background: var(--drake-panel);
+    border: 1px solid #1f2937;
+    border-radius: .75rem;
+}
+.metric-title { color: var(--drake-muted); font-size: .85rem; }
+.metric-value { font-size: 1.8rem; font-weight: 700; }
+.table-dark-custom {
+    background: var(--drake-panel);
+    color: var(--drake-text);
+}
+.table-dark-custom th, .table-dark-custom td { border-color: #243142; }
+.badge-status { font-size: .72rem; }
+.topbar {
+    background: #0b1220;
+    border: 1px solid #1f2937;
+    border-radius: .75rem;
+}
